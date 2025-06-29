@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SWallet Client</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        .card {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        input, select {
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        #response {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            height: 200px;
+            overflow-y: auto;
+        }
+        .action-group {
+            margin-top: 20px;
+        }
+        #loading {
+            color: #2980b9;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>SWallet - Substrate Wallet Client</h1>
+    
+    <div class="card">
+        <h2>Wallet Information</h2>
+        <button id="getWallet">Get Wallet Info</button>
+        <button id="getBalance">Check Balance</button>
+        <div id="walletInfo"></div>
+    </div>
+    
+    <div class="card">
+        <h2>Transfer Funds</h2>
+        <form id="transferForm">
+            <label for="recipient">Recipient Address:</label>
+            <input type="text" id="recipient" placeholder="Enter recipient address" required>
+            
+            <label for="amount">Amount (DOT):</label>
+            <input type="number" id="amount" min="0.1" step="0.1" placeholder="Enter amount to transfer" required>
+            
+            <div class="action-group">
+                <button type="submit">Send Transaction</button>
+                <span id="loading">Processing transaction...</span>
+            </div>
+        </form>
+    </div>
+    
+    <div class="card">
+        <h2>Response</h2>
+        <div id="response"></div>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:8080/api';
+        const responseEl = document.getElementById('response');
+        const walletInfoEl = document.getElementById('walletInfo');
+        const loadingEl = document.getElementById('loading');
+        
+        // Helper to append responses
+        function appendResponse(title, data) {
+            const time = new Date().toLocaleTimeString();
+            responseEl.innerHTML = `[${time}] ${title}:\n${JSON.stringify(data, null, 2)}\n\n` + responseEl.innerHTML;
+        }
+        
+        // Helper to show wallet info
+        function displayWalletInfo(data) {
+            walletInfoEl.innerHTML = `
+                <p><strong>Address:</strong> ${data.address}</p>
+                <p><strong>Balance:</strong> ${data.balance} DOT</p>
+                <p><strong>Public Key:</strong> ${data.public_key}</p>
+            `;
+        }
+        
+        // Get wallet info
+        document.getElementById('getWallet').addEventListener('click', async () => {
+            try {
+                const response = await fetch(`${API_BASE}/wallet`);
+                const data = await response.json();
+                displayWalletInfo(data);
+                appendResponse('Wallet Info', data);
+            } catch (error) {
+                appendResponse('Error', error.message);
+            }
+        });
+        
+        // Get balance
+        document.getElementById('getBalance').addEventListener('click', async () => {
+            try {
+                const response = await fetch(`${API_BASE}/balance`);
+                const data = await response.json();
+                appendResponse('Balance', data);
+                
+                // Update the balance in wallet info if it exists
+                if (walletInfoEl.innerHTML) {
+                    const walletResponse = await fetch(`${API_BASE}/wallet`);
+                    const walletData = await walletResponse.json();
+                    displayWalletInfo(walletData);
+                }
+            } catch (error) {
+                appendResponse('Error', error.message);
+            }
+        });
+        
+        // Transfer funds
+        document.getElementById('transferForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const recipient = document.getElementById('recipient').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            
+            if (!recipient || isNaN(amount) || amount <= 0) {
+                appendResponse('Validation Error', 'Please provide a valid recipient and amount');
+                return;
+            }
+            
+            loadingEl.style.display = 'inline';
+            
+            try {
+                const response = await fetch(`${API_BASE}/transfer`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        to: recipient,
+                        amount: amount
+                    })
+                });
+                
+                const data = await response.json();
+                appendResponse('Transfer Result', data);
+                
+                // Update the balance
+                const walletResponse = await fetch(`${API_BASE}/wallet`);
+                const walletData = await walletResponse.json();
+                displayWalletInfo(walletData);
+                
+                // Reset form
+                document.getElementById('transferForm').reset();
+            } catch (error) {
+                appendResponse('Error', error.message);
+            } finally {
+                loadingEl.style.display = 'none';
+            }
+        });
+        
+        // Initial load of wallet info
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch(`${API_BASE}/wallet`);
+                const data = await response.json();
+                displayWalletInfo(data);
+                appendResponse('Initial Wallet Info', data);
+            } catch (error) {
+                appendResponse('Error loading initial wallet info', error.message);
+            }
+        });
+    </script>
+</body>
+</html> 

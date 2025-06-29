@@ -1,0 +1,34 @@
+[package]
+name = "swallet"
+version = "0.1.0"
+edition = "2021"
+authors = ["SWallet Developer"]
+description = "A Substrate-based wallet application"
+
+[dependencies]
+# Substrate dependencies
+substrate-api-client = "0.13.0"
+sp-core = "6.0.0"
+sp-runtime = "6.0.0"
+parity-scale-codec = { version = "3.0.0", features = ["derive"] }
+scale-info = { version = "2.0.0", features = ["derive"] }
+
+# Async runtime
+tokio = { version = "1.24", features = ["full"] }
+
+# Cryptography
+hex = "0.4.3"
+
+# CLI
+clap = { version = "4.0", features = ["derive"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+tempfile = "3.3.0" 

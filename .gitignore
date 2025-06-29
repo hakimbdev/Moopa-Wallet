@@ -1,0 +1,17 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# Generated wallet files
+*.json
+wallet.json
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db 
